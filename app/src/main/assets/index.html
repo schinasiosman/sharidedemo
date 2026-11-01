@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Sharide Demo</title>
+<style>
+/* Sharide demo: one phone-width app column. Full screen on a phone, a centered phone frame on a desktop. Light only, by design: it shows the real app look. */
+:root{
+  --blue:#1E5BC6;
+  --blue-press:#184CA6;
+  --blue-tint:#E8EFFB;
+  --ink:#1C1C1E;
+  --ink-2:#3A3A3C;
+  --muted:#5E5E63;
+  --fill:#F2F2F5;
+  --line:#E4E4EA;
+  --map:#E8E9EE;
+  --block:#DDDFE5;
+  --river:#D2D5DD;
+  --road:#FFFFFF;
+  --white:#FFFFFF;
+  --outer:#D7D9E0;
+  --disabled-bg:#E3E4E9;
+  --disabled-fg:#6E6E74;
+  --font:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--outer);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+.app{position:relative;height:100%;max-width:440px;margin:0 auto;background:var(--white);overflow:hidden}
+@media (min-width:600px) and (min-height:700px){
+  .app{height:calc(100% - 48px);max-height:900px;margin:24px auto;border-radius:44px;box-shadow:0 30px 80px rgba(30,40,70,.25),0 0 0 10px #1F2126}
+}
+
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.page{position:absolute;inset:0;overflow-y:auto;padding:16px 22px 28px;display:flex;flex-direction:column;gap:24px}
+.map{position:absolute;inset:0;width:100%;height:100%;display:block}
+.m-bg{fill:var(--map)} .m-block{fill:var(--block)} .m-road{stroke:var(--road);fill:none} .m-river{stroke:var(--river);fill:none}
+.m-car{fill:var(--ink-2);stroke:var(--white);stroke-width:2}
+.m-blue{fill:var(--blue)} .m-white{fill:var(--white)}
+.m-route{stroke:var(--blue);fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.m-me{fill:var(--blue);stroke:var(--white);stroke-width:3}
+.pulse{fill:var(--blue);opacity:.12;transform-box:fill-box;transform-origin:center;animation:pulse 1.8s ease-out infinite}
+.pulse.b{animation-delay:.9s}
+@keyframes pulse{0%{transform:scale(.4);opacity:.5}100%{transform:scale(2.6);opacity:0}}
+
+.topbar{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:8px;z-index:4;pointer-events:none}
+.topbar > *{pointer-events:auto}
+.topbar .spacer{flex:1;pointer-events:none}
+.round{width:46px;height:46px;border-radius:23px;border:none;background:var(--white);box-shadow:0 4px 16px rgba(20,30,60,.12);display:flex;align-items:center;justify-content:center;color:var(--ink);padding:0;flex-shrink:0}
+.round.flat{box-shadow:none;background:var(--fill)}
+.demo{height:40px;padding:0 14px 0 11px;border-radius:20px;border:none;background:var(--white);box-shadow:0 4px 16px rgba(20,30,60,.12);display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:var(--ink-2)}
+.demo.flat{box-shadow:none;background:var(--fill)}
+.float-pill{height:40px;padding:0 15px;border-radius:20px;background:var(--white);box-shadow:0 4px 16px rgba(20,30,60,.12);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.dot{width:8px;height:8px;border-radius:4px;background:var(--blue)}
+.dot.hollow{background:var(--white);box-shadow:inset 0 0 0 2px #8E8E93}
+
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:80%;overflow-y:auto;background:var(--white);border-radius:28px 28px 0 0;padding:10px 20px 24px;box-shadow:0 -8px 30px rgba(20,30,60,.10);display:flex;flex-direction:column;gap:16px;z-index:3}
+.sheet.alert{box-shadow:0 -12px 44px rgba(30,91,198,.28)}
+.grip{width:38px;height:5px;border-radius:3px;background:#D1D1D6;align-self:center;flex-shrink:0}
+
+.h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.15;text-wrap:balance}
+.h2{margin:0;font-size:25px;font-weight:700;letter-spacing:-.4px;line-height:1.2;text-wrap:balance}
+.sub{margin:0;font-size:15.5px;color:var(--muted);line-height:1.4}
+.small{font-size:13px;color:var(--muted);line-height:1.4}
+.stack{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;gap:12px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.grow{flex:1}
+.num{font-variant-numeric:tabular-nums}
+
+.btn{height:56px;border-radius:18px;border:none;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:0 16px;transition:background .15s}
+.btn.big{height:60px;font-size:18px;border-radius:20px}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:active{background:var(--blue-press)}
+.btn-primary:disabled{background:var(--disabled-bg);color:var(--disabled-fg);cursor:default}
+.btn-soft{background:var(--fill);color:var(--ink)}
+.btn-outline{background:var(--white);color:var(--blue);box-shadow:inset 0 0 0 1.5px var(--blue)}
+.btn-link{background:none;border:none;color:var(--muted);font-size:15px;font-weight:600;min-height:44px;padding:0 4px}
+.span2{grid-column:span 2}
+
+.box{background:var(--fill);border-radius:18px}
+.route{padding:4px 16px}
+.route .r{display:flex;align-items:center;gap:12px;padding:12px 0}
+.route .r + .r{border-top:1px solid var(--line)}
+.mk-a{width:10px;height:10px;border-radius:5px;background:var(--blue);flex-shrink:0}
+.mk-b{width:10px;height:10px;border-radius:3px;background:var(--ink);flex-shrink:0}
+.lbl{font-size:12.5px;color:var(--muted)}
+.val{font-size:16px;font-weight:600}
+.tile{background:var(--fill);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .big{font-size:24px;font-weight:700;letter-spacing:-.3px}
+
+.field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:var(--ink-2);min-width:0}
+.input{height:54px;border-radius:16px;border:none;background:var(--fill);padding:0 16px;font-size:17px;color:var(--ink);width:100%;min-width:0}
+.input::placeholder{color:#8A8A8F}
+.input:focus{outline:2px solid var(--blue);outline-offset:0;background:var(--white)}
+.prefix{height:54px;padding:0 14px;border-radius:16px;background:var(--fill);display:flex;align-items:center;font-size:17px;font-weight:500;color:var(--ink)}
+.code{height:70px;font-size:30px;font-weight:600;letter-spacing:12px;text-align:center}
+
+.place{display:flex;align-items:center;gap:14px;padding:10px 0;border:none;background:none;text-align:left;width:100%;min-height:62px}
+.place + .place{border-top:1px solid var(--line)}
+.ico{width:42px;height:42px;border-radius:21px;background:var(--fill);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-2)}
+.ico.blue{background:var(--blue-tint);color:var(--blue)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{height:42px;padding:0 16px;border-radius:21px;border:none;box-shadow:inset 0 0 0 1.5px #D1D1D6;background:var(--white);color:var(--ink-2);font-size:15px;font-weight:600;white-space:nowrap}
+.chip.on{background:var(--blue);box-shadow:none;color:#fff}
+.chip.struck{text-decoration:line-through;color:var(--muted)}
+
+.bar{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
+.bar i{display:block;width:40%;height:100%;background:var(--blue);border-radius:3px;animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+
+.avatar{width:52px;height:52px;border-radius:26px;background:#D7DCE6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--ink-2);flex-shrink:0}
+.plate{padding:5px 9px;border-radius:9px;background:var(--white);box-shadow:inset 0 0 0 1.5px var(--ink);font-size:13px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.eta{width:66px;height:66px;border-radius:22px;background:var(--blue);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.eta b{font-size:24px;line-height:1}
+.eta span{font-size:12px}
+
+.done-mark{width:76px;height:76px;border-radius:38px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;align-self:center}
+.center{text-align:center;align-items:center}
+.stars{display:flex;gap:4px;justify-content:center}
+.star{width:48px;height:48px;border:none;background:none;padding:0;display:flex;align-items:center;justify-content:center;color:var(--blue)}
+
+.switch{width:52px;height:32px;border-radius:16px;background:#C7C7CC;position:relative;flex-shrink:0;transition:background .2s;display:block}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:left .2s}
+.switch.on{background:var(--blue)}
+.switch.on::after{left:23px}
+.setting{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border-radius:20px;border:none;background:var(--fill);text-align:left;width:100%}
+
+.ring{position:relative;width:66px;height:66px;flex-shrink:0}
+.ring svg{position:absolute;inset:0}
+.ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px}
+.ring .track{fill:none;stroke:var(--line);stroke-width:6}
+.ring .prog{fill:none;stroke:var(--blue);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+
+/* launcher */
+.launch{background:linear-gradient(var(--white),var(--white))}
+.logo{width:64px;height:64px;border-radius:20px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff}
+.word{font-size:40px;font-weight:700;letter-spacing:-1.2px;margin:0}
+.app-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:22px;border:none;background:var(--fill);text-align:left;width:100%}
+.app-card .ico{width:50px;height:50px;border-radius:16px;background:var(--white);color:var(--blue)}
+.app-card .t{font-size:18px;font-weight:700}
+.app-card .d{font-size:14px;color:var(--muted);margin-top:2px}
+.chev{color:#A1A1A8;flex-shrink:0}
+.tag{display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:13px;background:var(--blue-tint);color:var(--blue);font-size:13px;font-weight:600;align-self:flex-start}
+
+/* admin */
+.ahead{padding:12px 16px 0;display:flex;flex-direction:column;gap:14px;background:var(--white);border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:0 0 14px;scrollbar-width:none;margin:0 -16px;padding-left:16px;padding-right:16px}
+.tabs::-webkit-scrollbar{display:none}
+.abody{flex:1;overflow-y:auto;background:var(--fill);padding:16px 16px 28px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--white);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.stat{background:var(--white);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .n{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.pill{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:13px;font-size:12.5px;font-weight:600;white-space:nowrap;background:#E5E5EA;color:var(--ink-2)}
+.pill.blue{background:var(--blue);color:#fff}
+.pill.outline{background:var(--white);color:var(--blue);box-shadow:inset 0 0 0 1.5px var(--blue)}
+.sec-title{margin:6px 2px 0;font-size:13px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.mode{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:15px 16px;border-radius:18px;border:none;box-shadow:inset 0 0 0 1.5px #D1D1D6;background:var(--white);text-align:left;width:100%}
+.mode.on{background:var(--blue);box-shadow:none;color:#fff}
+.mode .m1{font-size:16px;font-weight:700}
+.mode .m2{font-size:14px;color:var(--muted)}
+.mode.on .m2{color:#DCE6F8}
+.mini-btn{height:38px;padding:0 14px;border-radius:12px;border:none;background:var(--fill);font-size:14px;font-weight:600;color:var(--ink)}
+
+.toast{position:absolute;left:16px;right:16px;top:70px;z-index:20;background:var(--ink);color:#fff;border-radius:16px;padding:13px 16px;font-size:15px;font-weight:500;opacity:0;transform:translateY(-8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app" id="app"></div>
+
+<script>
+(function(){
+const $app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const ic = {
+  back:'<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  grid:'<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>',
+  pin:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+  search:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  phone:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
+  cash:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  nav:'<svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
+  check:'<svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  chev:'<svg aria-hidden="true" class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  person:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  car:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="13" r=".8"/><circle cx="16.5" cy="13" r=".8"/></svg>',
+  chart:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
+  mountain:'<svg aria-hidden="true" width="38" height="38" viewBox="0 0 40 40" fill="currentColor"><path d="M4 31 L15 12 L21 22 L25 16 L36 31 Z"/><path d="M15 12 L12.2 16.8 L15 15.6 L17.6 16.6 Z" fill="#1E5BC6" opacity=".35"/></svg>',
+  star:(on)=>'<svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="'+(on?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>'
+};
+
+const COMPANIES = ['Company A','Company B','Company C'];
+const CO_DRIVER = {
+  'Company A':{name:'Dragan P.',init:'DP',car:'VW Passat, white',plate:'TE 4471 AC'},
+  'Company B':{name:'Arben D.',init:'AD',car:'Škoda Octavia, gray',plate:'TE 1234 AB'},
+  'Company C':{name:'Ilir S.',init:'IS',car:'Toyota Corolla, silver',plate:'TE 9012 BD'}
+};
+const PLACES = [
+  {name:'Tetovo Bus Station', sub:'Bus and train area', km:2.1, min:6},
+  {name:'South East European University', sub:'Ilindenska St', km:3.4, min:9},
+  {name:'Clinical Hospital Tetovo', sub:'Emergency and clinics', km:1.8, min:5},
+  {name:'Painted Mosque', sub:'Old town, by the Pena river', km:1.2, min:4}
+];
+
+function freshState(){
+  return {
+    view:'menu',
+    rider:{step:'signup', first:'Mira', last:'Krasniqi', email:'mira.k@example.com', phone:'70 123 456', code:'', dest:1, excluded:{}, rating:0, co:'Company B'},
+    driver:{screen:'offline', busy:false, left:30, km:0, trips:3, cash:640},
+    admin:{tab:'overview', tripFilter:'All', off:{}, suspended:{}, mode:'sequential', wait:30, radius:3,
+      fares:{'Company A':{base:60,perKm:40},'Company B':{base:60,perKm:40},'Company C':{base:50,perKm:45}}}
+  };
+}
+let S = freshState();
+
+const price = (co, km) => { const f = S.admin.fares[co]; return Math.round((Number(f.base||0) + Number(f.perKm||0)*km)/10)*10; };
+function activeCos(){
+  const open = COMPANIES.filter(c => !S.admin.off[c]);
+  const mine = open.filter(c => !S.rider.excluded[c]);
+  return mine.length ? mine : (open.length ? open : COMPANIES);
+}
+function fareRange(km){
+  const ps = activeCos().map(c => price(c, km));
+  const lo = Math.min.apply(null, ps), hi = Math.max.apply(null, ps);
+  return lo === hi ? lo + ' den' : lo + '–' + hi + ' den';
+}
+
+/* ---------- timers ---------- */
+let timers = [];
+function clearTimers(){ timers.forEach(t => { clearTimeout(t); clearInterval(t); }); timers = []; }
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const el = document.getElementById('toast'); if(!el) return;
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+/* ---------- maps ---------- */
+function along(pts, t){
+  const segs = []; let total = 0;
+  for(let i=1;i<pts.length;i++){ const d = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); segs.push(d); total += d; }
+  let d = Math.max(0, Math.min(1, t)) * total;
+  for(let i=0;i<segs.length;i++){
+    if(d <= segs[i]){ const k = segs[i] ? d/segs[i] : 0; return [pts[i][0]+(pts[i+1][0]-pts[i][0])*k, pts[i][1]+(pts[i+1][1]-pts[i][1])*k]; }
+    d -= segs[i];
+  }
+  return pts[pts.length-1];
+}
+const R_PICK = [150,320];
+const R_ROUTE = [[150,320],[150,170],[300,170],[298,108]];
+const R_APPROACH = [[300,250],[300,170],[150,170],[150,306]];
+
+function riderMap(step){
+  let o = '<svg class="map" viewBox="0 0 390 844" preserveAspectRatio="xMidYMin slice" aria-hidden="true">'+
+  '<rect class="m-bg" width="390" height="844"/>'+
+  '<rect class="m-block" x="18" y="40" width="120" height="90" rx="10"/><rect class="m-block" x="170" y="30" width="90" height="120" rx="10"/><rect class="m-block" x="290" y="60" width="110" height="80" rx="10"/>'+
+  '<rect class="m-block" x="20" y="190" width="90" height="140" rx="10"/><rect class="m-block" x="250" y="200" width="130" height="70" rx="10"/><rect class="m-block" x="30" y="380" width="140" height="80" rx="10"/>'+
+  '<rect class="m-block" x="240" y="350" width="120" height="120" rx="10"/><rect class="m-block" x="60" y="520" width="100" height="90" rx="10"/><rect class="m-block" x="230" y="530" width="140" height="100" rx="10"/>'+
+  '<rect class="m-block" x="20" y="660" width="120" height="120" rx="10"/><rect class="m-block" x="240" y="680" width="130" height="110" rx="10"/>'+
+  '<path class="m-river" stroke-width="18" d="M-20 470 C 80 430, 140 520, 230 490 S 360 420, 420 450"/>'+
+  '<path class="m-road" stroke-width="16" d="M150 -10 L 150 860"/><path class="m-road" stroke-width="14" d="M-10 170 L 400 170"/>'+
+  '<path class="m-road" stroke-width="12" d="M-10 335 L 400 300"/><path class="m-road" stroke-width="9" d="M210 -10 L 230 860"/>'+
+  '<path class="m-road" stroke-width="10" d="M-10 500 L 400 510"/><path class="m-road" stroke-width="8" d="M300 160 L 290 860"/>'+
+  '<path class="m-road" stroke-width="7" d="M60 -10 L 70 860"/><path class="m-road" stroke-width="9" d="M-10 640 L 400 650"/>';
+  if(step==='home' || step==='confirm' || step==='searching'){
+    o += '<rect class="m-car" x="142" y="112" width="16" height="26" rx="6"/><rect class="m-car" x="280" y="292" width="26" height="16" rx="6"/>'+
+         '<rect class="m-car" x="56" y="328" width="26" height="16" rx="6"/><rect class="m-car" x="214" y="56" width="16" height="26" rx="6"/>';
+  }
+  if(step==='confirm' || step==='searching' || step==='trip'){
+    o += '<polyline class="m-route" points="'+R_ROUTE.map(p=>p.join(',')).join(' ')+'"/>'+
+         '<rect x="288" y="96" width="20" height="20" rx="5" fill="#1C1C1E" stroke="#FFFFFF" stroke-width="3"/>';
+  }
+  if(step==='searching'){
+    o += '<circle class="pulse" cx="150" cy="320" r="40"/><circle class="pulse b" cx="150" cy="320" r="40"/>';
+  }
+  if(step!=='trip'){
+    o += '<circle class="m-white" cx="150" cy="320" r="14"/><circle class="m-blue" cx="150" cy="320" r="6.5"/>';
+  }
+  if(step==='assigned' || step==='arrived' || step==='trip'){
+    const p = step==='assigned' ? R_APPROACH[0] : (step==='arrived' ? [150,306] : R_ROUTE[0]);
+    o += '<g id="rcar" transform="translate('+p[0]+','+p[1]+')"><rect class="m-me" x="-10" y="-16" width="20" height="32" rx="7"/></g>';
+  }
+  return o + '</svg>';
+}
+
+const D_ME = [165,360];
+const D_PICK = [286,186];
+const D_ROUTE = [[165,360],[166,255],[284,252],[286,192]];
+function driverMap(screen, busy){
+  let o = '<svg class="map" viewBox="0 0 390 844" preserveAspectRatio="xMidYMin slice" aria-hidden="true">'+
+  '<rect class="m-bg" width="390" height="844"/>'+
+  '<rect class="m-block" x="20" y="130" width="110" height="100" rx="10"/><rect class="m-block" x="180" y="120" width="90" height="100" rx="10"/><rect class="m-block" x="300" y="140" width="100" height="90" rx="10"/>'+
+  '<rect class="m-block" x="20" y="290" width="120" height="110" rx="10"/><rect class="m-block" x="190" y="280" width="80" height="140" rx="10"/><rect class="m-block" x="300" y="290" width="90" height="130" rx="10"/>'+
+  '<rect class="m-block" x="40" y="470" width="130" height="90" rx="10"/><rect class="m-block" x="200" y="480" width="70" height="80" rx="10"/><rect class="m-block" x="300" y="480" width="80" height="90" rx="10"/>'+
+  '<rect class="m-block" x="20" y="20" width="110" height="80" rx="10"/><rect class="m-block" x="190" y="10" width="80" height="80" rx="10"/>'+
+  '<path class="m-river" stroke-width="18" d="M-20 620 C 90 580, 150 660, 240 630 S 360 580, 420 600"/>'+
+  '<path class="m-road" stroke-width="16" d="M160 -10 L 170 860"/><path class="m-road" stroke-width="14" d="M-10 255 L 400 250"/>'+
+  '<path class="m-road" stroke-width="11" d="M-10 440 L 400 455"/><path class="m-road" stroke-width="9" d="M287 -10 L 282 860"/>'+
+  '<path class="m-road" stroke-width="7" d="M70 -10 L 60 860"/><path class="m-road" stroke-width="8" d="M-10 110 L 400 105"/>';
+  if(screen==='request' || screen==='pickup'){
+    o += '<polyline class="m-route" points="'+D_ROUTE.map(p=>p.join(',')).join(' ')+'"/>'+
+         '<circle class="m-white" cx="286" cy="186" r="12"/><circle class="m-blue" cx="286" cy="186" r="6"/>';
+  }
+  const online = screen==='online' && !busy;
+  const p = (screen==='arrived' || screen==='trip') ? [286,200] : D_ME;
+  if(online) o += '<circle class="pulse" cx="'+p[0]+'" cy="'+p[1]+'" r="40"/>';
+  o += '<rect class="m-me" x="'+(p[0]-11)+'" y="'+(p[1]-17)+'" width="22" height="34" rx="8"/>';
+  return o + '</svg>';
+}
+
+const demoBtn = (flat) => '<button class="demo'+(flat?' flat':'')+'" data-act="menu" aria-label="Back to demo menu">'+ic.grid+'<span>Demo</span></button>';
+
+/* ---------- launcher ---------- */
+function menuView(){
+  return '<div class="page launch">'+
+    '<div class="stack" style="gap:14px;margin-top:20px">'+
+      '<div class="logo">'+ic.mountain+'</div>'+
+      '<div class="stack" style="gap:4px"><h1 class="word">Sharide</h1><p class="sub">Order a taxi in Tetovo</p></div>'+
+      '<span class="tag">Demo</span>'+
+    '</div>'+
+    '<div class="stack" style="gap:10px">'+
+      '<button class="app-card" data-act="go" data-to="rider"><span class="ico">'+ic.person+'</span><span class="grow"><span class="t" style="display:block">Rider app</span><span class="d" style="display:block">Sign up and order a taxi</span></span>'+ic.chev+'</button>'+
+      '<button class="app-card" data-act="go" data-to="driver"><span class="ico">'+ic.car+'</span><span class="grow"><span class="t" style="display:block">Driver app</span><span class="d" style="display:block">Accept rides, get paid in cash</span></span>'+ic.chev+'</button>'+
+      '<button class="app-card" data-act="go" data-to="admin"><span class="ico">'+ic.chart+'</span><span class="grow"><span class="t" style="display:block">Admin panel</span><span class="d" style="display:block">Companies, fares and drivers</span></span>'+ic.chev+'</button>'+
+    '</div>'+
+    '<div class="grow"></div>'+
+    '<div class="stack center" style="gap:4px">'+
+      '<p class="small" style="margin:0">Sample data. No real rides are ordered.</p>'+
+      '<button class="btn-link" data-act="reset">Reset demo</button>'+
+    '</div>'+
+  '</div>';
+}
+
+/* ---------- rider ---------- */
+function riderReady(){
+  const r = S.rider;
+  return r.first.trim() && r.last.trim() && /.+@.+\..+/.test(r.email) && r.phone.replace(/\D/g,'').length >= 8;
+}
+function riderView(){
+  const r = S.rider, st = r.step, dest = PLACES[r.dest];
+  if(st==='signup'){
+    return '<div class="page">'+
+      '<div class="row">'+demoBtn(true)+'</div>'+
+      '<div class="stack" style="gap:8px"><h1 class="h1">Create your account</h1><p class="sub">Takes less than a minute. You only do this once.</p></div>'+
+      '<form class="stack" style="gap:14px" id="signup" novalidate>'+
+        '<div class="grid2">'+
+          '<label class="field" for="f-first">First name<input class="input" id="f-first" data-f="first" autocomplete="given-name" value="'+esc(r.first)+'"></label>'+
+          '<label class="field" for="f-last">Last name<input class="input" id="f-last" data-f="last" autocomplete="family-name" value="'+esc(r.last)+'"></label>'+
+        '</div>'+
+        '<label class="field" for="f-email">Email<input class="input" id="f-email" type="email" data-f="email" autocomplete="email" value="'+esc(r.email)+'"></label>'+
+        '<label class="field" for="f-phone">Phone number<span class="row" style="gap:8px"><span class="prefix">+389</span><input class="input" id="f-phone" type="tel" data-f="phone" autocomplete="tel-national" value="'+esc(r.phone)+'"></span></label>'+
+        '<p class="small" style="margin:0">We\'ll text you a code to confirm your number. Drivers only see your first name.</p>'+
+      '</form>'+
+      '<div class="grow"></div>'+
+      '<div class="stack" style="gap:10px">'+
+        '<button class="btn big btn-primary" id="b-continue" data-act="rstep" data-s="code"'+(riderReady()?'':' disabled')+'>Continue</button>'+
+        '<p class="small" style="margin:0;text-align:center">By continuing you agree to the Terms and Privacy Policy</p>'+
+      '</div>'+
+    '</div>';
+  }
+  if(st==='code'){
+    const ok = r.code.length===6;
+    return '<div class="page">'+
+      '<div class="row" style="gap:8px"><button class="round flat" data-act="rstep" data-s="signup" aria-label="Back">'+ic.back+'</button>'+demoBtn(true)+'</div>'+
+      '<div class="stack" style="gap:8px"><h1 class="h1">Enter the code</h1><p class="sub">Sent by SMS to +389 '+esc(r.phone)+'</p></div>'+
+      '<label class="field" for="f-code">6-digit code<input class="input code num" id="f-code" data-f="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" value="'+esc(r.code)+'"></label>'+
+      '<div class="between"><p class="small" style="margin:0">Demo: type any 6 digits</p><button class="btn-link" data-act="toast" data-m="A new code is on its way">Resend code</button></div>'+
+      '<div class="grow"></div>'+
+      '<button class="btn big btn-primary" id="b-verify" data-act="rstep" data-s="welcome"'+(ok?'':' disabled')+'>Verify</button>'+
+    '</div>';
+  }
+  if(st==='welcome'){
+    return '<div class="page">'+
+      '<div class="row">'+demoBtn(true)+'</div>'+
+      '<div class="grow"></div>'+
+      '<div class="stack center" style="gap:18px"><div class="done-mark">'+ic.check+'</div>'+
+      '<div class="stack center" style="gap:6px"><h1 class="h1">Welcome, '+esc(r.first.trim()||'there')+'</h1><p class="sub">Your account is ready</p></div></div>'+
+      '<div class="grow"></div>'+
+      '<button class="btn big btn-primary" data-act="rstep" data-s="home">Order a taxi</button>'+
+    '</div>';
+  }
+  if(st==='done'){
+    const d = CO_DRIVER[r.co];
+    return '<div class="page">'+
+      '<div class="row">'+demoBtn(true)+'</div>'+
+      '<div class="stack center" style="gap:16px;margin-top:12px"><div class="done-mark">'+ic.check+'</div>'+
+      '<div class="stack center" style="gap:6px"><h1 class="h1">You\'ve arrived</h1><p class="sub">Please pay the driver in cash</p></div></div>'+
+      '<div class="box route">'+
+        '<div class="r between"><span class="sub">To</span><span class="val" style="text-align:right">'+esc(dest.name)+'</span></div>'+
+        '<div class="r between"><span class="sub">Distance</span><span class="val num">'+dest.km.toFixed(1)+' km</span></div>'+
+        '<div class="r between"><span class="sub">Taxi</span><span class="val">'+esc(r.co)+'</span></div>'+
+        '<div class="r between"><span class="sub">Total</span><span class="num" style="font-size:28px;font-weight:700">'+price(r.co, dest.km)+' den</span></div>'+
+      '</div>'+
+      '<div class="stack center" style="gap:6px"><span class="val">Rate '+esc(d.name)+'</span><div class="stars">'+
+        [1,2,3,4,5].map(i => '<button class="star" data-act="rate" data-n="'+i+'" aria-label="Rate '+i+' of 5">'+ic.star(i<=r.rating)+'</button>').join('')+
+      '</div></div>'+
+      '<div class="grow"></div>'+
+      '<button class="btn big btn-primary" data-act="rstep" data-s="home">Done</button>'+
+    '</div>';
+  }
+
+  let top = '<div class="topbar">'+(st==='confirm' ? '<button class="round" data-act="rstep" data-s="home" aria-label="Back">'+ic.back+'</button>' : '')+demoBtn()+'<span class="spacer"></span>'+
+    (st==='home' ? '<span class="float-pill"><span class="dot"></span>4 cars nearby</span>' : '')+'</div>';
+  let sh = '<div class="grip"></div>';
+  let cls = 'sheet';
+
+  if(st==='home'){
+    sh += '<h1 class="h1">Where to?</h1>'+
+      '<div class="box row" style="padding:14px 16px"><span class="mk-a"></span><span class="stack" style="gap:2px"><span class="lbl">Pickup · your location</span><span class="val">Ilindenska St 42</span></span></div>'+
+      '<label class="row box" for="f-dest" style="height:54px;padding:0 16px;color:var(--muted)">'+ic.search+'<input id="f-dest" class="grow" placeholder="Search destination" style="border:none;background:none;font-size:17px;outline:none;min-width:0;color:var(--ink)"></label>'+
+      '<div class="stack" style="gap:0">'+
+      PLACES.map((p,i) => '<button class="place" data-act="pick" data-i="'+i+'"><span class="ico">'+ic.pin+'</span><span class="grow stack" style="gap:2px;min-width:0"><span class="val">'+esc(p.name)+'</span><span class="small">'+esc(p.sub)+'</span></span><span class="small num" style="font-weight:600">'+p.km.toFixed(1)+' km</span></button>').join('')+
+      '</div>';
+  }
+  if(st==='confirm'){
+    const open = COMPANIES.filter(c => !S.admin.off[c]);
+    const activeCount = open.filter(c => !r.excluded[c]).length;
+    sh += '<div class="box route">'+
+        '<div class="r"><span class="mk-a"></span><span class="sub" style="color:var(--ink-2)">Ilindenska St 42</span></div>'+
+        '<div class="r"><span class="mk-b"></span><span class="val">'+esc(dest.name)+'</span></div>'+
+      '</div>'+
+      '<div class="between" style="align-items:flex-end"><span class="stack" style="gap:4px"><span class="lbl">Estimated fare</span><span class="num" style="font-size:34px;font-weight:700;letter-spacing:-1px;line-height:1">'+fareRange(dest.km)+'</span></span>'+
+      '<span class="stack" style="gap:4px;align-items:flex-end"><span class="val num">'+dest.km.toFixed(1)+' km</span><span class="small">about '+dest.min+' min</span></span></div>'+
+      '<div class="box row" style="padding:12px 14px;font-size:14px;color:var(--ink-2)">'+ic.cash+'<span>Pay cash to the driver. Prices per km are agreed with each company.</span></div>'+
+      '<div class="stack" style="gap:10px"><div class="between"><span class="val" style="font-size:15px">Taxi companies</span><span class="small">Tap to exclude</span></div><div class="chips">'+
+      open.map(c => { const on = !r.excluded[c]; return '<button class="chip'+(on?' on':' struck')+'" aria-pressed="'+on+'" data-act="exclude" data-c="'+c+'"'+(on && activeCount<=1?' aria-disabled="true"':'')+'>'+c+'</button>'; }).join('')+
+      '</div></div>'+
+      '<button class="btn big btn-primary" data-act="rstep" data-s="searching">Order taxi</button>';
+  }
+  if(st==='searching'){
+    sh += '<div class="stack"><h2 class="h2">Finding your taxi</h2><p class="sub">Alerting the closest available drivers</p></div>'+
+      '<div class="bar"><i></i></div>'+
+      '<div class="box between" style="padding:14px 16px"><span class="val">'+esc(dest.name)+'</span><span class="sub num" style="color:var(--ink-2)">'+fareRange(dest.km)+'</span></div>'+
+      '<button class="btn btn-soft" data-act="rstep" data-s="confirm">Cancel</button>';
+  }
+  if(st==='assigned' || st==='arrived'){
+    const d = CO_DRIVER[r.co];
+    const here = st==='arrived';
+    sh += '<div class="between"><span class="stack"><h2 class="h2">'+(here?'Your taxi is here':'Driver on the way')+'</h2><p class="sub">'+(here?'Look for the '+esc(d.car.split(',')[1].trim())+' '+esc(d.car.split(',')[0]):'Meet at Ilindenska St 42')+'</p></span>'+
+      (here ? '' : '<span class="eta"><b class="num" id="eta">4</b><span>min</span></span>')+'</div>'+
+      '<div class="box row" style="padding:14px"><span class="avatar">'+d.init+'</span><span class="grow stack" style="gap:2px;min-width:0"><span class="val">'+esc(d.name)+'</span><span class="small">'+esc(r.co)+' · '+esc(d.car)+'</span></span><span class="plate">'+d.plate+'</span></div>'+
+      '<div class="grid2"><button class="btn btn-primary" data-act="toast" data-m="In the real app this calls the driver">'+ic.phone+'Call driver</button><button class="btn btn-soft" data-act="rstep" data-s="home">Cancel ride</button></div>'+
+      (here ? '<button class="btn-link" data-act="rstep" data-s="trip">Demo: start the trip</button>' : '');
+  }
+  if(st==='trip'){
+    sh += '<div class="stack"><h2 class="h2">On the way</h2><p class="sub">To '+esc(dest.name)+'</p></div>'+
+      '<div class="grid2"><div class="tile"><span class="lbl">Arriving in</span><span class="big num" id="tmin">'+dest.min+' min</span></div><div class="tile"><span class="lbl">Fare</span><span class="big num">'+price(r.co, dest.km)+' den</span></div></div>'+
+      '<div class="box row" style="padding:12px 14px;font-size:14px;color:var(--ink-2)">'+ic.cash+'<span>Pay cash to the driver at the end</span></div>';
+  }
+  return '<div class="screen">'+riderMap(st)+top+'<div class="'+cls+'">'+sh+'</div></div>';
+}
+
+function riderStep(step){
+  const r = S.rider;
+  clearTimers();
+  if(step==='assigned'){
+    const act = activeCos();
+    r.co = act.indexOf('Company B') >= 0 ? 'Company B' : act[0];
+  }
+  if(step==='home') r.rating = 0;
+  r.step = step;
+  render();
+  if(step==='searching'){
+    timers.push(setTimeout(() => riderStep('assigned'), 3000));
+  }
+  if(step==='assigned'){
+    let t = 0;
+    timers.push(setInterval(() => {
+      t += 1/90;
+      const car = document.getElementById('rcar'), eta = document.getElementById('eta');
+      const p = along(R_APPROACH, t);
+      if(car) car.setAttribute('transform', 'translate('+p[0].toFixed(1)+','+p[1].toFixed(1)+')');
+      if(eta) eta.textContent = Math.max(1, Math.ceil(4*(1-t)));
+      if(t >= 1) riderStep('arrived');
+    }, 100));
+  }
+  if(step==='trip'){
+    let t = 0; const dest = PLACES[r.dest];
+    timers.push(setInterval(() => {
+      t += 1/90;
+      const car = document.getElementById('rcar'), m = document.getElementById('tmin');
+      const p = along(R_ROUTE, t);
+      if(car) car.setAttribute('transform', 'translate('+p[0].toFixed(1)+','+p[1].toFixed(1)+')');
+      if(m) m.textContent = Math.max(1, Math.ceil(dest.min*(1-t))) + ' min';
+      if(t >= 1) riderStep('done');
+    }, 100));
+  }
+}
+
+/* ---------- driver ---------- */
+const RING_C = 2*Math.PI*27;
+function driverView(){
+  const d = S.driver, sc = d.screen;
+  const fare = price('Company B', 3.4);
+  if(sc==='summary'){
+    const f = price('Company B', d.km);
+    return '<div class="page">'+
+      '<div class="row">'+demoBtn(true)+'</div>'+
+      '<div class="stack center" style="gap:8px;margin-top:40px"><span class="sub">Collect in cash</span><span class="num" style="font-size:60px;font-weight:700;letter-spacing:-2px;line-height:1">'+f+' den</span></div>'+
+      '<div class="box route">'+
+        '<div class="r between"><span class="sub">Distance</span><span class="val num">'+d.km.toFixed(1)+' km</span></div>'+
+        '<div class="r between"><span class="sub">Base fare</span><span class="val num">'+S.admin.fares['Company B'].base+' den</span></div>'+
+        '<div class="r between"><span class="sub">Per km</span><span class="val num">'+S.admin.fares['Company B'].perKm+' den</span></div>'+
+      '</div>'+
+      '<div class="grow"></div>'+
+      '<button class="btn big btn-primary" data-act="collected">Cash collected</button>'+
+    '</div>';
+  }
+  const online = sc !== 'offline';
+  const status = !online ? 'Offline' : (d.busy && sc==='online' ? 'Busy' : 'Online');
+  const top = '<div class="topbar">'+demoBtn()+'<span class="spacer"></span><span class="float-pill"><span class="dot'+(status==='Online'?'':' hollow')+'"></span>'+status+'</span></div>';
+  let sh = '<div class="grip"></div>', cls = 'sheet';
+  if(sc==='offline'){
+    sh += '<div class="stack"><h1 class="h1">Good morning, Arben</h1><p class="sub">Company B · TE 1234 AB</p></div>'+
+      '<div class="grid2"><div class="tile"><span class="lbl">Trips today</span><span class="big num">'+d.trips+'</span></div><div class="tile"><span class="lbl">Cash today</span><span class="big num">'+d.cash+' den</span></div></div>'+
+      '<button class="btn big btn-primary" data-act="dscreen" data-s="online">Go online</button>';
+  }
+  if(sc==='online'){
+    sh += '<div class="stack"><h2 class="h2">'+(d.busy?'You are busy':'Waiting for rides')+'</h2><p class="sub">'+(d.busy?'App requests are paused until you switch this off':'You\'ll be alerted when a rider nearby orders')+'</p></div>'+
+      '<button class="setting" data-act="busy" aria-pressed="'+d.busy+'"><span class="stack" style="gap:2px"><span class="val" style="font-size:17px">Busy</span><span class="small">On a phone or radio ride</span></span><span class="switch'+(d.busy?' on':'')+'"></span></button>'+
+      '<div class="grid2"><div class="tile"><span class="lbl">Trips today</span><span class="big num">'+d.trips+'</span></div><div class="tile"><span class="lbl">Cash today</span><span class="big num">'+d.cash+' den</span></div></div>'+
+      '<button class="btn btn-soft" data-act="dscreen" data-s="offline">Go offline</button>';
+  }
+  if(sc==='request'){
+    cls += ' alert';
+    const off = (RING_C*(1-d.left/S.admin.wait)).toFixed(1);
+    sh += '<div class="between"><span class="stack"><h2 class="h2">New ride request</h2><p class="sub">0.8 km away · about 3 min</p></span>'+
+      '<span class="ring" role="timer" aria-label="Seconds left to accept"><svg width="66" height="66" viewBox="0 0 66 66" aria-hidden="true"><circle class="track" cx="33" cy="33" r="27"/><circle class="prog" id="ring" cx="33" cy="33" r="27" stroke-dasharray="'+RING_C.toFixed(1)+'" stroke-dashoffset="'+off+'" transform="rotate(-90 33 33)"/></svg><b class="num" id="left">'+d.left+'</b></span></div>'+
+      '<div class="box route">'+
+        '<div class="r"><span class="mk-a"></span><span class="stack" style="gap:2px"><span class="lbl">Pickup</span><span class="val">Ilindenska St 42</span></span></div>'+
+        '<div class="r"><span class="mk-b"></span><span class="stack" style="gap:2px"><span class="lbl">Destination</span><span class="val">South East European University</span></span></div>'+
+      '</div>'+
+      '<div class="between"><span class="stack" style="gap:2px"><span class="val">Mira K.</span><span class="small">Verified rider · cash</span></span><span class="stack" style="gap:2px;align-items:flex-end"><span class="num" style="font-size:24px;font-weight:700">'+fare+' den</span><span class="small">3.4 km trip</span></span></div>'+
+      '<div class="grid3"><button class="btn big btn-soft" data-act="dscreen" data-s="online">Decline</button><button class="btn big btn-primary span2" data-act="dscreen" data-s="pickup">Accept</button></div>';
+  }
+  if(sc==='pickup'){
+    sh += '<div class="stack"><h2 class="h2">Pick up Mira</h2><p class="sub">Ilindenska St 42 · 3 min</p></div>'+
+      '<button class="btn big btn-primary" data-act="toast" data-m="In the real app this opens Google Maps or Waze">'+ic.nav+'Navigate in Google Maps</button>'+
+      '<div class="grid2"><button class="btn btn-soft" data-act="toast" data-m="In the real app this calls the rider">'+ic.phone+'Call rider</button><button class="btn btn-outline" data-act="dscreen" data-s="arrived">I\'ve arrived</button></div>';
+  }
+  if(sc==='arrived'){
+    sh += '<div class="stack"><h2 class="h2">Waiting for Mira</h2><p class="sub">She has been told you\'re here</p></div>'+
+      '<button class="btn big btn-primary" data-act="dscreen" data-s="trip">Start trip</button>'+
+      '<button class="btn-link" data-act="noshow">Rider didn\'t show up</button>';
+  }
+  if(sc==='trip'){
+    sh += '<div class="stack"><h2 class="h2">On trip</h2><p class="sub">To South East European University</p></div>'+
+      '<div class="grid2"><div class="tile"><span class="lbl">Distance</span><span class="big num" id="dkm">'+d.km.toFixed(1)+' km</span></div><div class="tile"><span class="lbl">Fare so far</span><span class="big num" id="dfare">'+price('Company B', d.km)+' den</span></div></div>'+
+      '<button class="btn btn-soft" data-act="toast" data-m="In the real app this opens Google Maps or Waze">'+ic.nav+'Navigate</button>'+
+      '<button class="btn big btn-primary" data-act="dscreen" data-s="summary">End trip</button>';
+  }
+  return '<div class="screen">'+driverMap(sc, d.busy)+top+'<div class="'+cls+'">'+sh+'</div></div>';
+}
+
+function driverScreen(sc){
+  const d = S.driver;
+  clearTimers();
+  if(sc==='trip') d.km = 0;
+  if(sc==='request') d.left = S.admin.wait;
+  d.screen = sc;
+  render();
+  if(sc==='online' && !d.busy){
+    timers.push(setTimeout(() => driverScreen('request'), 3500));
+  }
+  if(sc==='request'){
+    timers.push(setInterval(() => {
+      d.left -= 1;
+      const ring = document.getElementById('ring'), left = document.getElementById('left');
+      if(ring) ring.setAttribute('stroke-dashoffset', (RING_C*(1-d.left/S.admin.wait)).toFixed(1));
+      if(left) left.textContent = d.left;
+      if(d.left <= 0){ toast('Not accepted in time. Sent to the next driver.'); driverScreen('online'); }
+    }, 1000));
+  }
+  if(sc==='trip'){
+    timers.push(setInterval(() => {
+      d.km = Math.min(3.4, Math.round((d.km + 0.1)*10)/10);
+      const k = document.getElementById('dkm'), f = document.getElementById('dfare');
+      if(k) k.textContent = d.km.toFixed(1) + ' km';
+      if(f) f.textContent = price('Company B', d.km) + ' den';
+      if(d.km >= 3.4) clearTimers();
+    }, 450));
+  }
+}
+
+/* ---------- admin ---------- */
+const RAW_TRIPS = [
+  {time:'16:12', rider:'Elena S.', from:'Ilindenska St 42', to:'SEEU', driver:'Arben D.', company:'Company B', km:3.4, status:'On trip'},
+  {time:'16:08', rider:'Agon B.', from:'Bus Station', to:'Painted Mosque', driver:'Dragan P.', company:'Company A', km:1.9, status:'To pickup'},
+  {time:'15:51', rider:'Marija P.', from:'Clinical Hospital', to:'Tetovo center', driver:'Ilir S.', company:'Company C', km:1.5, status:'Completed'},
+  {time:'15:34', rider:'Leart R.', from:'SEEU', to:'Bus Station', driver:'Arben D.', company:'Company B', km:3.6, status:'Completed'},
+  {time:'15:10', rider:'Teuta M.', from:'Tetovo center', to:'Clinical Hospital', driver:'Goran M.', company:'Company A', km:1.4, status:'No-show'},
+  {time:'14:47', rider:'Stefan V.', from:'Painted Mosque', to:'SEEU', driver:'Besnik H.', company:'Company C', km:2.8, status:'Completed'},
+  {time:'14:20', rider:'Blerta Z.', from:'Bus Station', to:'Ilindenska St 10', driver:'Fatmir A.', company:'Company B', km:2.2, status:'Cancelled'},
+  {time:'13:58', rider:'Mira K.', from:'Ilindenska St 42', to:'SEEU', driver:'Nikola T.', company:'Company A', km:3.4, status:'Completed'}
+];
+const RAW_DRIVERS = [
+  {name:'Arben D.', company:'Company B', car:'Škoda Octavia', plate:'TE 1234 AB', status:'Online', trips:5},
+  {name:'Dragan P.', company:'Company A', car:'VW Passat', plate:'TE 4471 AC', status:'Online', trips:4},
+  {name:'Ilir S.', company:'Company C', car:'Toyota Corolla', plate:'TE 9012 BD', status:'Busy', trips:3},
+  {name:'Goran M.', company:'Company A', car:'Škoda Superb', plate:'TE 3380 AA', status:'Online', trips:6},
+  {name:'Besnik H.', company:'Company C', car:'Dacia Logan', plate:'TE 5521 BC', status:'Busy', trips:2},
+  {name:'Fatmir A.', company:'Company B', car:'Opel Astra', plate:'TE 7765 AD', status:'Offline', trips:1},
+  {name:'Nikola T.', company:'Company A', car:'Hyundai i30', plate:'TE 2209 BA', status:'Online', trips:4},
+  {name:'Driton K.', company:'Company C', car:'Kia Ceed', plate:'TE 6643 AB', status:'Offline', trips:0}
+];
+const PILL = {'Completed':'', 'On trip':'blue', 'To pickup':'outline', 'No-show':'', 'Cancelled':'', 'Online':'blue', 'Busy':'outline', 'Offline':'', 'Suspended':''};
+const pill = s => '<span class="pill '+(PILL[s]||'')+'">'+s+'</span>';
+
+function adminView(){
+  const a = S.admin;
+  const trips = RAW_TRIPS.map(t => Object.assign({}, t, {fare: price(t.company, t.km)}));
+  const drivers = RAW_DRIVERS.map(d => Object.assign({}, d, {status: a.suspended[d.name] ? 'Suspended' : (a.off[d.company] ? 'Offline' : d.status)}));
+  const tabs = [['overview','Overview'],['trips','Trips'],['drivers','Drivers'],['fares','Fares'],['dispatch','Dispatch']];
+  let body = '';
+
+  if(a.tab==='overview'){
+    const done = trips.filter(t => t.status==='Completed');
+    const live = trips.filter(t => t.status==='On trip' || t.status==='To pickup');
+    body += '<div class="grid2">'+
+      '<div class="stat"><span class="lbl">Drivers online</span><span class="n num">'+drivers.filter(d => d.status==='Online'||d.status==='Busy').length+'</span><span class="small">'+drivers.filter(d=>d.status==='Busy').length+' marked busy</span></div>'+
+      '<div class="stat"><span class="lbl">Trips today</span><span class="n num">'+trips.length+'</span><span class="small">'+live.length+' in progress</span></div>'+
+      '<div class="stat"><span class="lbl">Cash fares</span><span class="n num">'+done.reduce((s,t)=>s+t.fare,0)+'</span><span class="small">den, completed trips</span></div>'+
+      '<div class="stat"><span class="lbl">No-shows</span><span class="n num">'+trips.filter(t=>t.status==='No-show').length+'</span><span class="small">Reported by drivers</span></div>'+
+    '</div>'+
+    '<h2 class="sec-title">Happening now</h2>'+
+    live.map(tripCard).join('');
+  }
+  if(a.tab==='trips'){
+    const f = a.tripFilter;
+    const rows = trips.filter(t => f==='All' || t.status===f || (f==='On trip' && t.status==='To pickup'));
+    body += '<div class="chips">'+['All','Completed','On trip','No-show','Cancelled'].map(x => '<button class="chip'+(x===f?' on':'')+'" aria-pressed="'+(x===f)+'" data-act="afilter" data-f="'+x+'">'+x+'</button>').join('')+'</div>'+
+      rows.map(tripCard).join('');
+  }
+  if(a.tab==='drivers'){
+    body += '<button class="btn btn-primary" data-act="toast" data-m="In the real panel this opens a form to add a driver">Add driver</button>'+
+      drivers.map(d => '<div class="card">'+
+        '<div class="between"><span class="val">'+esc(d.name)+'</span>'+pill(d.status)+'</div>'+
+        '<div class="between"><span class="small">'+esc(d.company)+' · '+esc(d.car)+'</span><span class="plate">'+d.plate+'</span></div>'+
+        '<div class="between"><span class="small num">'+d.trips+' trips today</span><button class="mini-btn" data-act="asusp" data-n="'+esc(d.name)+'">'+(a.suspended[d.name]?'Restore':'Suspend')+'</button></div>'+
+      '</div>').join('');
+  }
+  if(a.tab==='fares'){
+    const openCount = COMPANIES.filter(c => !a.off[c]).length;
+    body += '<p class="small" style="margin:0 2px">Each company sets a base fare and a price per km. Riders see the estimate before ordering.</p>'+
+      COMPANIES.map((c,i) => { const isOff = !!a.off[c]; const f = a.fares[c];
+        return '<div class="card">'+
+          '<div class="between"><span class="stack" style="gap:2px"><span class="val" style="font-size:18px">'+c+'</span><span class="small">'+RAW_DRIVERS.filter(d=>d.company===c).length+' drivers · '+(isOff?'paused':'active in the app')+'</span></span>'+
+          '<button class="setting" style="width:auto;padding:6px;background:none" data-act="aco" data-c="'+c+'" aria-pressed="'+!isOff+'" aria-label="'+c+' active in the app"'+(!isOff && openCount<=1?' aria-disabled="true"':'')+'><span class="switch'+(isOff?'':' on')+'"></span></button></div>'+
+          '<div class="grid2">'+
+            '<label class="field" for="fb'+i+'">Base fare (den)<input class="input num" id="fb'+i+'" type="number" inputmode="numeric" min="0" data-fare="'+c+'" data-k="base" value="'+f.base+'"></label>'+
+            '<label class="field" for="fk'+i+'">Per km (den)<input class="input num" id="fk'+i+'" type="number" inputmode="numeric" min="0" data-fare="'+c+'" data-k="perKm" value="'+f.perKm+'"></label>'+
+          '</div>'+
+          '<div class="box between" style="padding:12px 14px"><span class="small">A 3 km trip costs</span><span class="val num" id="ex'+i+'">'+price(c,3)+' den</span></div>'+
+        '</div>'; }).join('');
+  }
+  if(a.tab==='dispatch'){
+    const modes = [['sequential','One driver at a time','Closest driver first, then the next'],['broadcast','3 closest at once','First driver to accept gets the ride']];
+    body += '<div class="card"><span class="val">How requests are sent</span>'+
+      modes.map(m => '<button class="mode'+(a.mode===m[0]?' on':'')+'" aria-pressed="'+(a.mode===m[0])+'" data-act="amode" data-m="'+m[0]+'"><span class="m1">'+m[1]+'</span><span class="m2">'+m[2]+'</span></button>').join('')+'</div>'+
+      '<div class="card"><span class="val">Time to accept</span><div class="chips">'+[20,30,45,60].map(s => '<button class="chip'+(a.wait===s?' on':'')+'" aria-pressed="'+(a.wait===s)+'" data-act="await" data-v="'+s+'">'+s+' sec</button>').join('')+'</div></div>'+
+      '<div class="card"><span class="val">Search radius</span><div class="chips">'+[2,3,5].map(k => '<button class="chip'+(a.radius===k?' on':'')+'" aria-pressed="'+(a.radius===k)+'" data-act="arad" data-v="'+k+'">'+k+' km</button>').join('')+'</div></div>'+
+      '<div class="card" style="background:var(--blue-tint)"><span style="font-size:15px;line-height:1.5;color:var(--ink-2)">'+(a.mode==='sequential'
+        ? 'The closest available driver within '+a.radius+' km gets '+a.wait+' seconds to accept. If he declines or doesn\'t answer, the next closest is alerted.'
+        : 'The 3 closest available drivers within '+a.radius+' km are alerted together and have '+a.wait+' seconds. The first to accept gets the ride.')+'</span></div>'+
+      '<p class="small" style="margin:0 2px">The driver app demo uses the time you pick here.</p>';
+  }
+
+  return '<div class="screen">'+
+    '<div class="ahead">'+
+      '<div class="between">'+demoBtn(true)+'<span class="tag" style="align-self:center">Sample data</span></div>'+
+      '<div class="stack" style="gap:2px"><h1 class="h1">Admin</h1><p class="sub">Sharide · today in Tetovo</p></div>'+
+      '<div class="tabs" role="tablist">'+tabs.map(t => '<button class="chip'+(a.tab===t[0]?' on':'')+'" role="tab" aria-selected="'+(a.tab===t[0])+'" data-act="atab" data-t="'+t[0]+'">'+t[1]+'</button>').join('')+'</div>'+
+    '</div>'+
+    '<div class="abody">'+body+'</div>'+
+  '</div>';
+}
+function tripCard(t){
+  return '<div class="card" style="gap:8px">'+
+    '<div class="between"><span class="small num">'+t.time+' · '+esc(t.rider)+'</span>'+pill(t.status)+'</div>'+
+    '<span class="val">'+esc(t.from)+' → '+esc(t.to)+'</span>'+
+    '<div class="between"><span class="small">'+esc(t.driver)+' · '+esc(t.company)+' · '+t.km.toFixed(1)+' km</span><span class="val num">'+t.fare+' den</span></div>'+
+  '</div>';
+}
+
+/* ---------- render + routing ---------- */
+function render(){
+  let h = '';
+  if(S.view==='rider') h = riderView();
+  else if(S.view==='driver') h = driverView();
+  else if(S.view==='admin') h = adminView();
+  else h = menuView();
+  $app.innerHTML = h + '<div class="toast" id="toast" role="status" aria-live="polite"></div>';
+}
+function setView(v){
+  S.view = v;
+  if(v==='rider') riderStep(S.rider.step);
+  else if(v==='driver') driverScreen(S.driver.screen);
+  else { clearTimers(); render(); }
+  const sc = $app.querySelector('.page, .abody'); if(sc) sc.scrollTop = 0;
+}
+function fromHash(){
+  const h = (location.hash||'').replace('#','');
+  setView(['rider','driver','admin'].indexOf(h) >= 0 ? h : 'menu');
+}
+window.addEventListener('hashchange', fromHash);
+
+/* ---------- actions ---------- */
+const A = {
+  go: d => { if(location.hash === '#'+d.to) setView(d.to); else location.hash = d.to; },
+  menu: () => { if(location.hash === '#menu') setView('menu'); else location.hash = 'menu'; },
+  reset: () => { clearTimers(); S = freshState(); render(); toast('Demo reset'); },
+  toast: d => toast(d.m),
+  rstep: d => riderStep(d.s),
+  pick: d => { S.rider.dest = Number(d.i); riderStep('confirm'); },
+  exclude: d => {
+    const r = S.rider, c = d.c;
+    const open = COMPANIES.filter(x => !S.admin.off[x]);
+    const activeCount = open.filter(x => !r.excluded[x]).length;
+    if(!r.excluded[c] && activeCount <= 1){ toast('Keep at least one company'); return; }
+    r.excluded[c] = !r.excluded[c]; render();
+  },
+  rate: d => { S.rider.rating = Number(d.n); render(); },
+  dscreen: d => driverScreen(d.s),
+  busy: () => { S.driver.busy = !S.driver.busy; driverScreen('online'); },
+  noshow: () => { toast('No-show reported to the company'); driverScreen('online'); },
+  collected: () => { const d = S.driver; d.trips += 1; d.cash += price('Company B', d.km); d.km = 0; driverScreen('online'); },
+  atab: d => { S.admin.tab = d.t; render(); },
+  afilter: d => { S.admin.tripFilter = d.f; render(); },
+  asusp: d => { S.admin.suspended[d.n] = !S.admin.suspended[d.n]; render(); },
+  aco: d => {
+    const a = S.admin;
+    const openCount = COMPANIES.filter(c => !a.off[c]).length;
+    if(!a.off[d.c] && openCount <= 1){ toast('Keep at least one company active'); return; }
+    a.off[d.c] = !a.off[d.c]; render();
+  },
+  amode: d => { S.admin.mode = d.m; render(); },
+  await: d => { S.admin.wait = Number(d.v); render(); },
+  arad: d => { S.admin.radius = Number(d.v); render(); }
+};
+$app.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if(!b || b.disabled) return;
+  const fn = A[b.dataset.act]; if(fn){ e.preventDefault(); fn(b.dataset); }
+});
+$app.addEventListener('submit', e => e.preventDefault());
+$app.addEventListener('input', e => {
+  const t = e.target;
+  if(t.dataset.f){
+    const r = S.rider, k = t.dataset.f;
+    if(k==='code'){ t.value = t.value.replace(/\D/g,'').slice(0,6); r.code = t.value; const b = document.getElementById('b-verify'); if(b) b.disabled = r.code.length !== 6; return; }
+    r[k] = t.value;
+    const b = document.getElementById('b-continue'); if(b) b.disabled = !riderReady();
+  }
+  if(t.dataset.fare){
+    const c = t.dataset.fare, i = COMPANIES.indexOf(c);
+    S.admin.fares[c][t.dataset.k] = t.value === '' ? 0 : Math.max(0, Number(t.value));
+    const ex = document.getElementById('ex'+i); if(ex) ex.textContent = price(c,3) + ' den';
+  }
+});
+
+fromHash();
+})();
+</script>
+
+</body>
+</html>
